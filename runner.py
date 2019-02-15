@@ -3,6 +3,10 @@ import databaseutils as db
 import timeframe
 import multiprocesslibrary as mpl
 
+PHP_INTERPRETER = 'php'
+AGGREGATION_SCRIPT = 'test.php'
+
+
 if __name__ == '__main__':
     conn = db.connect(db='raw')
     conn_agg = db.connect(db='agg')
@@ -10,7 +14,10 @@ if __name__ == '__main__':
     date_range = db.get_date_range(conn)
     frames = timeframe.get_time_frames(*date_range)
 
-    # TODO: clean out tables: current, history
+    # TOCHECK: clean out tables: current, history, archive
+    db.empty_out_archive(conn)
+    db.empty_out_current(conn_agg)
+    db.empty_out_history(conn_agg)
 
     for tf_index, f in enumerate(frames):
 
@@ -24,12 +31,12 @@ if __name__ == '__main__':
         # (to run php script: https://stackoverflow.com/a/16071877) Check=True
         # TOCHECK: 3.1) check for different osm_line_id in SINGLE_DATA_TABLE
         osm_ids = db.get_osm_ids(conn)
-        # TODO: 3.2) splits list in [NUM CORES] entries
-        mpl.launch('php script', osm_ids)
-        # TODO  3.3) launch [NUM CORES] modified PHP script
+        mpl.launch(PHP_INTERPRETER, AGGREGATION_SCRIPT, osm_ids)
+
+        # TOCHECK  3.3) launch [NUM CORES] modified PHP script
         #            changes:
-        #               - SRS_Road_Roughness_Values days limit to something like 10000
-        # TODO: 4) save current in history table (with proper tf index)
+        #               - TODO SRS_Road_Roughness_Values days limit to something like 10000
+        # TOCHECK: 4) save current in history table (with proper tf index)
         db.save_current_to_history(conn_agg, tf_index)
         pass
 

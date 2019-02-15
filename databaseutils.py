@@ -8,6 +8,8 @@ import datetime
 SINGLE_DATA_TABLE = "single_data"
 SINGLE_DATA_DATE_COLUMN = "date"
 ARCHIVE = "archive"
+CURRENT = "current"
+HISTORY = "history"
 
 
 def connect(db='raw'):
@@ -54,15 +56,15 @@ def get_date_range(conn):
     return [begin, end]
 
 
-def empty_out_single_data(conn):
+def empty_out_table(conn, table_name):
     try:
         # create a cursor
         cur = conn.cursor()
 
         # execute a statement
-        cur.execute('TRUNCATE {};'.format(SINGLE_DATA_TABLE))
+        cur.execute('TRUNCATE {};'.format(table_name))
 
-        print("Table {0} has been cleaned out.".format(SINGLE_DATA_TABLE))
+        print("Table {0} has been cleaned out.".format(table_name))
 
         # close the communication with the PostgreSQL
         cur.close()
@@ -70,6 +72,22 @@ def empty_out_single_data(conn):
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
         raise Exception
+
+
+def empty_out_single_data(conn):
+    empty_out_table(conn, SINGLE_DATA_TABLE)
+
+
+def empty_out_archive(conn):
+    empty_out_table(conn, ARCHIVE)
+
+
+def empty_out_current(conn):
+    empty_out_table(conn, CURRENT)
+
+
+def empty_out_history(conn):
+    empty_out_table(conn, HISTORY)
 
 
 def move_data_within_time_frame(conn, tf):
