@@ -4,7 +4,7 @@ import numpy as np
 import subprocess
 import os
 import time
-import io
+
 
 MERGE_CHECK_PERIOD = 1
 
