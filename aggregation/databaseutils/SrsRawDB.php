@@ -118,7 +118,7 @@ class SrsRawDB {
 		//pg_query($this -> conn, 'DELETE FROM "' . SrsRawDB::TMP_CARTODB_TABLE . '" WHERE "osmLineId" = ' . $row[0]);
 	}
 
-	public function SRS_Road_Roughness_Values($geomId, $meters = 20, $range = 40, $min_position_resolution = 20, $days = 7) {
+	public function SRS_Road_Roughness_Values($geomId, $meters = 20, $range = 40, $min_position_resolution = 20, $days = 10000) {
 		$updatedRoughness = array();
         $query = "SELECT ST_AsGeoJson(avg_point) AS p,
 						avg_roughness AS r
