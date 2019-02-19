@@ -2,7 +2,9 @@
 import multiprocessing
 import numpy as np
 import subprocess
+import os
 import time
+import io
 
 MERGE_CHECK_PERIOD = 1
 
@@ -13,6 +15,11 @@ def get_core_count():
 NUM_CORES = get_core_count()
 
 
+def serialize(data: list):
+    data = map(lambda a: str(a), data)
+    return ",".join(data)
+
+
 def launch(script, parameters, osm_ids):
     process_list = []
 
@@ -21,12 +28,22 @@ def launch(script, parameters, osm_ids):
 
     # divide inputs in evenly sized chunks
     input_lists = np.array_split(osm_ids, NUM_CORES)
+    print("input args:")
+    print(input_lists)
 
-    for i in range(0, NUM_CORES - 1, 1):
+    for i in range(0, NUM_CORES, 1):
+
         if len(input_lists[i]) > 0:
+
+            proc_env = os.environ.copy()
+            proc_env["args"] = serialize(input_lists[i].tolist())
+
+            print("launching {0} {1}".format([script, parameters], proc_env["args"]))
+
             process_list.append(
-                subprocess.Popen(['ping', '8.8.8.8']))  # TODO change with actual values PHP and script
-            # subprocess.Popen([script, parameters, input_lists[i]]))  # TODO change with actual values PHP and script
+                # subprocess.Popen(['ping', '8.8.8.8'], env=proc_env))  # TODO change with actual values PHP and script
+                # subprocess.Popen([script, parameters], env=proc_env))  # TODO change with actual values PHP and script
+                subprocess.Popen([script, parameters], env=proc_env))  # TODO change with actual values PHP and script
 
     return process_list
 
@@ -51,7 +68,3 @@ def merge(processes):
             print(processes[i].pid, ' Process exited with return code %d' % processes[i].returncode)
 
 
-inputs = range(50)
-procs = launch(None, inputs)
-
-merge(procs)
