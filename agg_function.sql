@@ -9,7 +9,7 @@ DECLARE
   how_many ALIAS FOR $1;
   new_time_frame ALIAS FOR $2;
 BEGIN
-  insert into history (ppe, osm_id, quality, the_geom, highway, created_at, time_frame) (select ppe, osm_id, quality, the_geom, highway,  updated_at as created_at, new_time_frame from current limit how_many);
+  insert into history (ppe, osm_id, quality, the_geom, highway, created_at, time_frame, count, stddev) (select ppe, osm_id, quality, the_geom, highway,  updated_at as created_at, new_time_frame, count, stddev from current limit how_many);
 END;
 $_$;
 
