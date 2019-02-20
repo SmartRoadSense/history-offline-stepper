@@ -86,6 +86,19 @@ class SrsRawDB {
 
     }
 
+    public function SRS_Single_Data_Count(){
+
+      	$result = pg_query($this -> conn, "SELECT count(*) as count from single_data;");
+
+		if (!$result)
+			throw new Exception("Error fetching SRS single_data count: " . pg_last_error($this -> conn));
+
+		$row = pg_fetch_array($result);
+
+        return $row['count'];
+
+    }
+
     public function SRS_Intersection_Close_Enough($aRoad, $bRoad, $points, $range){
 
         $arraySql = "";
@@ -135,6 +148,14 @@ class SrsRawDB {
 		while ($row) {
 			$r = new stdClass;
 			$r -> point = $row['p'];
+
+			if($row['r'] == null) {
+			    //echo "Error: AVG roughness NULL value".PHP_EOL;
+			    //flush();
+			    //exit(-1);
+			    //throw new Exception("Error: AVG roughness NULL value");
+			}
+
 			$r -> avgRoughness = $row['r'];
 			array_push($updatedRoughness, $r);
 

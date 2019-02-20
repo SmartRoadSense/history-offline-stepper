@@ -5,8 +5,8 @@ import multiprocesslibrary as mpl
 
 # PHP_INTERPRETER = 'php'
 PHP_INTERPRETER = 'C:/xampp/php/php.exe'
-# AGGREGATION_SCRIPT = 'aggregation/aggregate.php'
-AGGREGATION_SCRIPT = 'aggregation/test.php'
+AGGREGATION_SCRIPT = 'aggregation/aggregate.php'
+#AGGREGATION_SCRIPT = 'aggregation/test.php'
 
 if __name__ == '__main__':
     conn = db.connect(db='raw')
@@ -17,39 +17,40 @@ if __name__ == '__main__':
 
     print("{0} cores detected".format(mpl.get_core_count()))
 
-    # TOCHECK: clean out tables: current, history, archive
-    ##db.empty_out_archive(conn)
-    ##db.empty_out_current(conn_agg)
-    ##db.empty_out_history(conn_agg)
+    # clean out tables: current, history
+    db.empty_out_current(conn_agg)
+    db.empty_out_history(conn_agg)
 
-    ##for tf_index, f in enumerate(frames):
-    for tf_index, f in enumerate(range(1)):
-
+    for tf_index, f in enumerate(frames):
+        
         print(tf_index, f)
-        # TOCHECK: 1) clean out single_data table
-        ##db.empty_out_single_data(conn)
-        # TOCHECK: 2) populate single_data table
-        ##db.move_data_within_time_frame(conn, f)
-        # TODO: 3) apply special (no filtering on old data points) aggregation
-        # on single_data table (note: NO history stepper at the end)
-        # (to run php script: https://stackoverflow.com/a/16071877) Check=True
-        # TOCHECK: 3.1) check for different osm_line_id in SINGLE_DATA_TABLE
-        ##osm_ids = db.get_osm_ids(conn)
-        osm_ids = range(20)
-        ##mpl.launch(PHP_INTERPRETER, AGGREGATION_SCRIPT, osm_ids)
-        procs = mpl.launch(PHP_INTERPRETER, AGGREGATION_SCRIPT, osm_ids)
+        # clean out single_data table
+        db.empty_out_single_data(conn)
+        # populate single_data table
+        db.move_data_within_time_frame(conn, f)
+        record_count = db.get_single_data_count(conn)
+        print("Table single_data populated with {0} records".format(record_count))
 
-        # TOCHECK  3.3) launch [NUM CORES] modified PHP script
-        #            changes:
-        #               - TODO SRS_Road_Roughness_Values days limit to something like 10000
+        # check for different osm_line_id in SINGLE_DATA_TABLE
+        osm_ids = db.get_osm_ids(conn)
+        print("Aggregating OSM ids: {0}".format(osm_ids))
 
-        if len(procs) > 0:
-            mpl.merge(procs)
+        if len(osm_ids) > 1:
+            print("Aggregation over frame {0}".format(f))
+            procs = mpl.launch(PHP_INTERPRETER, AGGREGATION_SCRIPT, osm_ids)
 
-        # TOCHECK: 4) save current in history table (with proper tf index)
-        ##db.save_current_to_history(conn_agg, tf_index)
+            # launch [NUM CORES] modified PHP script
+            # NOTE: SRS_Road_Roughness_Values days limit to something like 10000
 
-    ##db.disconnect(conn)
-    ##db.disconnect(conn_agg)
+            if len(procs) > 0:
+                mpl.merge(procs)
+        else:
+            print("Skipping frame {0}".format(f))
+
+        # save current in history table (with proper tf index)
+        db.save_current_to_history(conn_agg, tf_index)
+
+    db.disconnect(conn)
+    db.disconnect(conn_agg)
 
     print("All done")

@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import config
 import multiprocessing
 import numpy as np
 import subprocess
@@ -13,6 +14,25 @@ def get_core_count():
 
 
 NUM_CORES = get_core_count()
+
+
+def create_environment():
+    env = os.environ.copy()
+    raw_config = config.raw_config()
+    env['RAW_DB_HOST'] = raw_config['host']
+    env['RAW_DB_PORT'] = raw_config['port']
+    env['RAW_DB_NAME'] = raw_config['database']
+    env['RAW_DB_USER'] = raw_config['user']
+    env['RAW_DB_PASS'] = raw_config['password']
+
+    agg_config = config.agg_config()
+    env['AGG_DB_HOST'] = agg_config['host']
+    env['AGG_DB_PORT'] = agg_config['port']
+    env['AGG_DB_NAME'] = agg_config['database']
+    env['AGG_DB_USER'] = agg_config['user']
+    env['AGG_DB_PASS'] = agg_config['password']
+
+    return env
 
 
 def serialize(data: list):
@@ -35,7 +55,7 @@ def launch(script, parameters, osm_ids):
 
         if len(input_lists[i]) > 0:
 
-            proc_env = os.environ.copy()
+            proc_env = create_environment()
             proc_env["args"] = serialize(input_lists[i].tolist())
 
             print("launching {0} {1}".format([script, parameters], proc_env["args"]))
@@ -65,6 +85,6 @@ def merge(processes):
 
     for i, f in enumerate(flags):
         if f != 0:
-            print(processes[i].pid, ' Process exited with return code %d' % processes[i].returncode)
+            print(processes[i].pid, ' Process exited with return code {0}'.format(processes[i].returncode))
 
 

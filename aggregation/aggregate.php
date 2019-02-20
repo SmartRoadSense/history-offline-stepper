@@ -17,9 +17,6 @@ if (ob_get_length()) ob_end_clean();
 $projectionSize = SRS_UPDATE_DATA_PROJECTIONS_SIZE;
 $roadRoughnessMeters = ROAD_ROUGHNESS_METERS;
 $roadRoughnessRange = ROAD_ROUGHNESS_RANGE;
-$tryFixProjections = TRY_TO_FIX_PROJECTIONS;
-$uploadToAggregateDB = UPLOAD_TO_CARTODB;
-$historifyOldData = HISTORIFY_OLD_RAW_DATA;
 
 // ******* meta ***************** //
 printTimedInfoln("Starting...", true);
@@ -28,7 +25,6 @@ printTimedInfoln("Starting...", true);
 $srsDB = new SrsRawDB();
 $srsAggregateDB = new SrsAggregateDB();
 $debugObj = new DebugCounter();
-$profiler = new TimeCounter();
 $overallProfiler = new TimeCounter();
 $overallProfiler->Start();
 
@@ -46,8 +42,6 @@ try {
     $srsAggregateDB -> open();
     printDebugln("Connection open.", PRINT_PID);
 
-    $profiler->Start();
-
 	printDebugln("Found new values on OsmLines with the following OsmIds: ", PRINT_PID);
     printDebug(print_r($values, true), PRINT_PID);
     printDebugln("", PRINT_PID);
@@ -60,6 +54,9 @@ try {
             printDebugln("Get OsmRoad highways type with OsmId" . $geomId, PRINT_PID);
             $roadType = $srsDB -> SRS_Get_OsmRoad_Data($geomId);
             printDebugln("RoadType:" . $roadType, PRINT_PID);
+
+            $sd_count = $srsDB -> SRS_Single_Data_Count();
+            printDebugln("single_data count:" . $sd_count, PRINT_PID);
 
             printInfoln("Calculate roughness on point along OsmLine with OsmId " . $geomId. " (road type:$roadType)", PRINT_PID);
             $updatedRoughness = $srsDB -> SRS_Road_Roughness_Values($geomId, $roadRoughnessMeters, $roadRoughnessRange);
@@ -87,8 +84,6 @@ try {
         }
     }
 
-    $profiler->PrintTime(TimeCounter::$STEP_LOCAL_AGGREGATION, PRINT_PID);
-    $profiler->PrintTime(TimeCounter::$STEP_REMOTE_UPLOAD, PRINT_PID);
 
 } catch(Exception $ex) {
 	printErrln("Error opening the connection to the DB: " . $ex, PRINT_PID);
@@ -101,7 +96,6 @@ $srsDB -> close();
 $overallProfiler->Stop();
 
 if($debugObj){
-    $debugObj ->PrintHitsResume("Hits Resume", PRINT_PID);
     $debugObj ->PrintExecutionTime(false, PRINT_PID);
 }
 

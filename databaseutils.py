@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import psycopg2
+from psycopg2 import extras
 from config import raw_config
 from config import agg_config
 import datetime
@@ -22,6 +23,7 @@ def connect(db='raw'):
         # connect to the PostgreSQL server
         print('Connecting to the PostgreSQL database...')
         conn = psycopg2.connect(**params)
+        conn.autocommit = True
 
         # create a cursor
         cur = conn.cursor()
@@ -121,6 +123,32 @@ def save_current_to_history(conn, time_frame, limit='50000000'):
 
         # close the communication with the PostgreSQL
         cur.close()
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
+        raise Exception
+
+
+def get_single_data_count(conn):
+    return get_table_count(conn, SINGLE_DATA_TABLE)
+
+
+def get_table_count(conn, table_name):
+    try:
+        # create a cursor
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # execute a statement
+        cur.execute('SELECT count(*) as count FROM single_data;')
+
+        row = cur.fetchone()
+
+        count = row['count']
+
+        # close the communication with the PostgreSQL
+        cur.close()
+
+        return count
 
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
