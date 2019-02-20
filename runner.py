@@ -2,11 +2,16 @@
 import databaseutils as db
 import timeframe
 import multiprocesslibrary as mpl
+import logging, sys
 
 # PHP_INTERPRETER = 'php'
 PHP_INTERPRETER = 'C:/xampp/php/php.exe'
 AGGREGATION_SCRIPT = 'aggregation/aggregate.php'
 #AGGREGATION_SCRIPT = 'aggregation/test.php'
+
+# set logging level
+#logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
 if __name__ == '__main__':
     conn = db.connect(db='raw')
@@ -15,28 +20,28 @@ if __name__ == '__main__':
     date_range = db.get_date_range(conn)
     frames = timeframe.get_time_frames(*date_range)
 
-    print("{0} cores detected".format(mpl.get_core_count()))
+    logging.info("{0} cores detected".format(mpl.get_core_count()))
 
     # clean out tables: current, history
     db.empty_out_current(conn_agg)
     db.empty_out_history(conn_agg)
 
     for tf_index, f in enumerate(frames):
-        
-        print(tf_index, f)
+
+        logging.info("time_frame: {0} - from {1} to {2}".format(tf_index, *f))
         # clean out single_data table
         db.empty_out_single_data(conn)
         # populate single_data table
         db.move_data_within_time_frame(conn, f)
         record_count = db.get_single_data_count(conn)
-        print("Table single_data populated with {0} records".format(record_count))
+        logging.info("{0} raw records".format(record_count))
 
         # check for different osm_line_id in SINGLE_DATA_TABLE
         osm_ids = db.get_osm_ids(conn)
-        print("Aggregating OSM ids: {0}".format(osm_ids))
+        logging.debug("Aggregating OSM ids: {0}".format(osm_ids))
 
         if len(osm_ids) > 1:
-            print("Aggregation over frame {0}".format(f))
+            logging.debug("Aggregation over frame {0}".format(f))
             procs = mpl.launch(PHP_INTERPRETER, AGGREGATION_SCRIPT, osm_ids)
 
             # launch [NUM CORES] modified PHP script
@@ -45,7 +50,7 @@ if __name__ == '__main__':
             if len(procs) > 0:
                 mpl.merge(procs)
         else:
-            print("Skipping frame {0}".format(f))
+            logging.debug("Skipping frame {0}".format(f))
 
         # save current in history table (with proper tf index)
         db.save_current_to_history(conn_agg, tf_index)
@@ -53,4 +58,4 @@ if __name__ == '__main__':
     db.disconnect(conn)
     db.disconnect(conn_agg)
 
-    print("All done")
+    logging.info("All done")

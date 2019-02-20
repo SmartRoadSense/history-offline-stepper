@@ -4,6 +4,7 @@ from psycopg2 import extras
 from config import raw_config
 from config import agg_config
 import datetime
+import logging
 
 # DB Constants
 SINGLE_DATA_TABLE = "single_data"
@@ -21,7 +22,7 @@ def connect(db='raw'):
         params = raw_config() if db == 'raw' else agg_config()
 
         # connect to the PostgreSQL server
-        print('Connecting to the PostgreSQL database...')
+        logging.debug('Connecting to the PostgreSQL database...')
         conn = psycopg2.connect(**params)
         conn.autocommit = True
 
@@ -29,25 +30,25 @@ def connect(db='raw'):
         cur = conn.cursor()
 
         # execute a statement
-        print('PostgreSQL database version:')
+        logging.debug('PostgreSQL database version:')
         cur.execute('SELECT version()')
 
         # display the PostgreSQL database server version
         db_version = cur.fetchone()
-        print(db_version)
+        logging.debug(db_version)
 
         # close the communication with the PostgreSQL
         cur.close()
 
         return conn
     except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
+        logging.error(error)
 
 
 def disconnect(conn):
     if conn is not None:
         conn.close()
-        print('Database connection closed.')
+        logging.debug('Database connection closed.')
 
 
 def get_date_range(conn):
@@ -66,13 +67,13 @@ def empty_out_table(conn, table_name):
         # execute a statement
         cur.execute('TRUNCATE {};'.format(table_name))
 
-        print("Table {0} has been cleaned out.".format(table_name))
+        logging.debug("Table {0} has been cleaned out.".format(table_name))
 
         # close the communication with the PostgreSQL
         cur.close()
 
     except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
+        logging.error(error)
         raise Exception
 
 
@@ -101,13 +102,13 @@ def move_data_within_time_frame(conn, tf):
         cur.execute('INSERT INTO {0} SELECT * FROM {1} WHERE {1}.{2} > \'{3}\' '
                     'AND {1}.{2} < \'{4}\';'.format(SINGLE_DATA_TABLE, ARCHIVE, SINGLE_DATA_DATE_COLUMN, tf[0], tf[1]))
 
-        print("Table {0} populated.".format(SINGLE_DATA_TABLE))
+        logging.debug("Table {0} populated.".format(SINGLE_DATA_TABLE))
 
         # close the communication with the PostgreSQL
         cur.close()
 
     except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
+        logging.error(error)
         raise Exception
 
 
@@ -119,13 +120,13 @@ def save_current_to_history(conn, time_frame, limit='50000000'):
         # execute a statement
         cur.execute('SELECT srs_current_to_history({0}, {1});'.format(limit, time_frame))
 
-        print("History saved as time-frame: {0}.".format(time_frame))
+        logging.debug("History saved as time-frame: {0}.".format(time_frame))
 
         # close the communication with the PostgreSQL
         cur.close()
 
     except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
+        logging.error(error)
         raise Exception
 
 
@@ -151,7 +152,7 @@ def get_table_count(conn, table_name):
         return count
 
     except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
+        logging.error(error)
         raise Exception
 
 
@@ -170,7 +171,7 @@ def get_osm_ids(conn):
             for row in rows:
                 osm_ids.append(row['osm_line_id'])
 
-            print(osm_ids)
+            logging.debug(osm_ids)
 
             # close the communication with the PostgreSQL
             cur.close()
@@ -178,7 +179,7 @@ def get_osm_ids(conn):
             return osm_ids
 
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
+            logging.error(error)
             raise Exception
 
 
