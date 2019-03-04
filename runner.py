@@ -40,7 +40,7 @@ if __name__ == '__main__':
         osm_ids = db.get_osm_ids(conn)
         logging.debug("Aggregating OSM ids: {0}".format(osm_ids))
 
-        if len(osm_ids) > 1:
+        if len(osm_ids) > 0:
             logging.debug("Aggregation over frame {0}".format(f))
             procs = mpl.launch(PHP_INTERPRETER, AGGREGATION_SCRIPT, osm_ids)
 
@@ -52,6 +52,8 @@ if __name__ == '__main__':
         else:
             logging.debug("Skipping frame {0}".format(f))
 
+        agg_record_count = db.get_current_count(conn_agg)
+        logging.info("{0} agg records".format(agg_record_count))
         # save current in history table (with proper tf index)
         db.save_current_to_history(conn_agg, tf_index)
 

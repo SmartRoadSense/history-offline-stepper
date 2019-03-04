@@ -71,7 +71,7 @@ def launch(script, parameters, osm_ids):
             process_list.append(
                 # subprocess.Popen(['ping', '8.8.8.8'], env=proc_env))  # TODO change with actual values PHP and script
                 # subprocess.Popen([script, parameters], env=proc_env))  # TODO change with actual values PHP and script
-                subprocess.Popen([script, parameters], env=proc_env, stdout=stdout))  # TODO change with actual values PHP and script
+                subprocess.Popen([script, parameters], env=proc_env, stdout=stdout))
 
     return process_list
 
