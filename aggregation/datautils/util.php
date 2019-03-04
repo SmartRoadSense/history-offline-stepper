@@ -52,6 +52,7 @@ function fromSrsList2AggregateDBList($roughnessList, $geomId, $roadType){
 		$aggData = new stdClass();
 		$aggData->ppe = $r->avgRoughness;
 		$aggData->ppe_stddev = $r->ppeStddev;
+		$aggData->occupancy = $r->occupancy;
 		$aggData->osmid = $geomId;
 		$aggData->highway = $roadType;
 

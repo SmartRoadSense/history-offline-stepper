@@ -137,10 +137,11 @@ class SrsRawDB {
 						avg_roughness AS r,
 						max_date,
 						count,
-						stddev_ppe
+						stddev_ppe, 
+						occupancy as occupancy
 				  	FROM
 						srs_road_roughness_values($geomId, $meters, $range, $min_position_resolution, $days)
-						AS result(avg_roughness float, avg_point geometry, max_date timestamp, count bigint, stddev_ppe float)";
+						AS result(avg_roughness float, avg_point geometry, max_date timestamp, count bigint, stddev_ppe float, occupancy float)";
 
 		$result = pg_query($this -> conn, $query);
 
@@ -155,6 +156,7 @@ class SrsRawDB {
 			$r -> last_update = $row['max_date'];
 			$r -> count = $row['count'];
 			$r -> ppeStddev = $row['stddev_ppe'];
+			$r -> occupancy = $row['occupancy'];
 			array_push($updatedRoughness, $r);
 
 			// fetch next row

@@ -18,20 +18,21 @@ BEGIN
     $1 AS avg_point,
     MAX(date) as max_date,
     COUNT(*) as count,
-    STDDEV(ppe) as stddev_ppe
+    STDDEV(ppe) as stddev_ppe,
+    AVG(occupancy)
   FROM (
          SELECT
            ppe,
-           date
+           vals.date,
+           cast(nullif(metadata::json->>'numberOfPeople', '1') AS float) as occupancy
          FROM
-           single_data AS vals
+           single_data AS vals left join track  as t on t.track_id = vals.track_id
          WHERE
            ST_Distance_Sphere($1, vals.position) < $2
            AND vals.osm_line_id = $3
            AND vals.evaluate = 1
            AND position_resolution < $4
-           AND date > NOW() - ($5 || 'days')::INTERVAL
-           -- select GREATEST((metadata::json->>'numberOfPeople')::integer, 1), extract('year' from track.date) as y from track where extract('year' from track.date) = 2018  limit 100
+           AND vals.date > NOW() - ($5 || 'days')::INTERVAL
        ) AS foo
   LOOP
     RETURN NEXT r;
@@ -69,7 +70,7 @@ BEGIN
   WHILE (i <= 1)
   LOOP
     -- Get avg here --
-    RETURN QUERY SELECT result.avg_roughness, result.avg_point, result.max_date, result.count, result.stddev_ppe FROM srs_avg_roughness(ST_Line_Interpolate_Point(curr_road, i), range, geom_id, min_resolution, days) AS result(avg_roughness float, avg_point geometry, max_date timestamp, count bigint, stddev_ppe float);
+    RETURN QUERY SELECT result.avg_roughness, result.avg_point, result.max_date, result.count, result.stddev_ppe, result.occupancy FROM srs_avg_roughness(ST_Line_Interpolate_Point(curr_road, i), range, geom_id, min_resolution, days) AS result(avg_roughness float, avg_point geometry, max_date timestamp, count bigint, stddev_ppe float, occupancy float);
     i := i + step;
   END loop;
   RETURN;
