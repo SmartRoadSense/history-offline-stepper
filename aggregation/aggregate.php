@@ -68,7 +68,7 @@ try {
 
                 if (count($aggregateList) > 0) {
                     $srsAggregateDB->SRS_UploadAggregateData($aggregateList);
-                    printDebugln("Roughness calculated along OsmLine (with OsmId " . $geomId . ") UPLOADED to local aggregations db. Removing from tmp table...", PRINT_PID);
+                    printDebugln("Roughness calculated for OsmId " . $geomId , PRINT_PID);
                 }else{
                     printDebugln("Aggregate list is null!", PRINT_PID);
                 }
@@ -76,6 +76,23 @@ try {
             }
             catch(Exception $ex) {
                 printErrln("Error uploading data into local aggregations db.", PRINT_PID);
+                printErrln($ex, PRINT_PID);
+            }
+
+            try {
+
+                $aggStats = $srsAggregateDB->SRS_GetAggregatedStats($geomId);
+
+                if(count($aggStats) > 0) {
+                    $srsAggregateDB->SRS_UpdateQualityIndexes($aggStats);
+                    printDebugln(count($aggStats)."quality indexes updated for OsmId " . $geomId , PRINT_PID);
+                }else{
+                    printDebugln("Aggregate Statistics list is null!", PRINT_PID);
+                }
+
+            }
+            catch(Exception $ex) {
+                printErrln("Error calculating quality indexes of aggregated values.", PRINT_PID);
                 printErrln($ex, PRINT_PID);
             }
 

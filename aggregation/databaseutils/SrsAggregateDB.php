@@ -11,6 +11,11 @@ class SrsAggregateDB {
     const COUNT_COLUMN = "count";
     const STDDEV_COLUMN = "stddev";
     const LAST_COUNT_COLUMN = "last_count";
+    const LAST_STDDEV_COLUMN = "last_stddev";
+    const LAST_PPE_COLUMN = "last_ppe";
+    const OCCUPANCY_COLUMN = "occupancy";
+
+
 	private $conn;
 	private $dbHost;
 	private $dbPort;
@@ -58,13 +63,13 @@ class SrsAggregateDB {
  		-- update existing rows
  		upsert AS (
 			UPDATE " . SrsAggregateDB::TABLE_NAME . " real_table
-			SET " . SrsAggregateDB::PPE_COLUMN . " = ((real_table.".SrsAggregateDB::PPE_COLUMN ." + n.ppe)/ 2), " . SrsAggregateDB::OSM_ID_COLUMN . " = n.osm_id, " . SrsAggregateDB::HIGHWAY_COLUMN . " = n.highway, ".SrsAggregateDB::UPDATED_AT_COLUMN." = n.updated_at, ".SrsAggregateDB::COUNT_COLUMN." = (real_table.".SrsAggregateDB::COUNT_COLUMN ." + n.count), ".SrsAggregateDB::STDDEV_COLUMN." = ((real_table.".SrsAggregateDB::STDDEV_COLUMN ." + n.stddev)/ 2), ".SrsAggregateDB::LAST_COUNT_COLUMN." = n.count
+			SET " . SrsAggregateDB::PPE_COLUMN . " = ((real_table.".SrsAggregateDB::PPE_COLUMN ." + n.ppe)/ 2), ". SrsAggregateDB::LAST_PPE_COLUMN." = n.ppe ," . SrsAggregateDB::OSM_ID_COLUMN . " = n.osm_id, " . SrsAggregateDB::HIGHWAY_COLUMN . " = n.highway, ".SrsAggregateDB::UPDATED_AT_COLUMN." = n.updated_at, ".SrsAggregateDB::COUNT_COLUMN." = (real_table.".SrsAggregateDB::COUNT_COLUMN ." + n.count), ".SrsAggregateDB::STDDEV_COLUMN." = ((real_table.".SrsAggregateDB::STDDEV_COLUMN ." + n.stddev)/ 2), ".SrsAggregateDB::LAST_STDDEV_COLUMN." = n.stddev , ".SrsAggregateDB::LAST_COUNT_COLUMN." = n.count
 			FROM n WHERE real_table.the_geom = n.the_geom
 			RETURNING real_table.the_geom
 		)
 		-- insert missing rows
-		INSERT INTO " . SrsAggregateDB::TABLE_NAME . " (" . SrsAggregateDB::PPE_COLUMN . ", " . SrsAggregateDB::GEOM_COLUMN . ", " . SrsAggregateDB::OSM_ID_COLUMN . ", " . SrsAggregateDB::HIGHWAY_COLUMN  . ", " . SrsAggregateDB::UPDATED_AT_COLUMN . ", " . SrsAggregateDB::COUNT_COLUMN . ", " . SrsAggregateDB::STDDEV_COLUMN . ", ". SrsAggregateDB::LAST_COUNT_COLUMN . ")
-		SELECT n.ppe, n.the_geom, n.osm_id, n.highway, n.updated_at, n.count, n.stddev, n.count FROM n
+		INSERT INTO " . SrsAggregateDB::TABLE_NAME . " (" . SrsAggregateDB::PPE_COLUMN . ", " . SrsAggregateDB::GEOM_COLUMN . ", " . SrsAggregateDB::OSM_ID_COLUMN . ", " . SrsAggregateDB::HIGHWAY_COLUMN  . ", " . SrsAggregateDB::UPDATED_AT_COLUMN . ", " . SrsAggregateDB::COUNT_COLUMN . ", " . SrsAggregateDB::STDDEV_COLUMN . ", " . SrsAggregateDB::LAST_PPE_COLUMN . ", " . SrsAggregateDB::LAST_STDDEV_COLUMN . ", ". SrsAggregateDB::LAST_COUNT_COLUMN . ")
+		SELECT n.ppe, n.the_geom, n.osm_id, n.highway, n.updated_at, n.count, n.stddev, n.ppe, n.stddev, n.count FROM n
 		WHERE n.the_geom NOT IN (
 			SELECT the_geom FROM upsert
 		);";
@@ -119,6 +124,59 @@ class SrsAggregateDB {
         if (!$result)
             throw new Exception("Error in history step process: " . pg_last_error($this -> conn));
 
+
+    }
+
+    public function SRS_GetAggregatedStats($geomId)
+    {
+        $aggPointsStats = array();
+        $query = "SELECT the_geom, last_count, last_stddev, last_ppe, osm_id FROM current;";
+
+        $result = pg_query($this -> conn, $query);
+
+        if (!$result)
+            throw new Exception("Error Getting last aggregate data updated: " . pg_last_error($this -> conn));
+
+        $row = pg_fetch_array($result);
+        while ($row) {
+            $r = new stdClass;
+            $r -> the_geom = $row['the_geom'];
+            $r -> last_count = $row['last_count'];
+            $r -> last_stddev = $row['last_stddev'];
+            $r -> last_ppe = $row['last_ppe'];
+            $r -> osm_id = $row['osm_id'];
+            array_push($aggPointsStats, $r);
+
+            // fetch next row
+            $row = pg_fetch_array($result);
+        }
+
+        return $aggPointsStats;
+    }
+
+    private function SRS_calculateQualityIndex($avg, $count, $stddev) {
+
+        if($count < QUALITY_INDEX_MINIMUM_DATA){
+            return 0;
+        }
+
+        return QUALITY_Z_VALUE * $stddev / sqrt($count);
+
+    }
+
+    public function SRS_UpdateQualityIndexes($aggStats)
+    {
+
+        foreach($aggStats as $agg) {
+
+            $qualityIndex = $this->SRS_calculateQualityIndex($agg->last_ppe, $agg->last_count, $agg->last_stddev);
+            //if($qualityIndex > 0) {
+            printDebugln("Point stats[ count: $agg->last_count, stddev: $agg->last_stddev, quality: $qualityIndex]");
+            $query = "UPDATE current SET quality = $qualityIndex WHERE current.the_geom = '{$agg->the_geom}';";
+            printDebugln("query: $query");
+            pg_query($this->conn, $query);
+            //}
+        }
 
     }
 
