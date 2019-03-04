@@ -26,13 +26,12 @@ BEGIN
          FROM
            single_data AS vals
          WHERE
-           ST_DWithin($1,
-                      vals.position,
-                      meters_radians)
+           ST_Distance_Sphere($1, vals.position) < $2
            AND vals.osm_line_id = $3
            AND vals.evaluate = 1
            AND position_resolution < $4
            AND date > NOW() - ($5 || 'days')::INTERVAL
+           -- select GREATEST((metadata::json->>'numberOfPeople')::integer, 1), extract('year' from track.date) as y from track where extract('year' from track.date) = 2018  limit 100
        ) AS foo
   LOOP
     RETURN NEXT r;

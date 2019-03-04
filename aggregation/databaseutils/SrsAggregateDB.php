@@ -10,6 +10,7 @@ class SrsAggregateDB {
     const UPDATED_AT_COLUMN = "updated_at";
     const COUNT_COLUMN = "count";
     const STDDEV_COLUMN = "stddev";
+    const LAST_COUNT_COLUMN = "last_count";
 	private $conn;
 	private $dbHost;
 	private $dbPort;
@@ -49,7 +50,7 @@ class SrsAggregateDB {
 		// prepare each VALUES element
 		$values = array();
 		foreach ($data as $d)
-			array_push($values, "(" . $d -> ppe . ",ST_SetSRID(ST_Point(" . $d -> longitude . "," . $d -> latitude . "),4326), ". $d -> osmid.", '". $d -> highway ."', '". $d -> updated_at ."'::timestamp, ". $d -> count .", ". (is_null($d -> ppe_stddev) ? "0.0": $d -> ppe_stddev).")");
+			array_push($values, "(" . $d -> ppe . ",ST_SetSRID(ST_Point(" . $d -> longitude . "," . $d -> latitude . "),4326), ". $d -> osmid.", '". $d -> highway ."', '". $d -> updated_at ."'::timestamp, ". $d -> count .", ". (is_null($d -> ppe_stddev) ? "0.0": $d -> ppe_stddev). ")");
 		// then complete the insert statement imploding values with commas
 		$upsert .= implode(",", $values);
 		$upsert .= "
@@ -57,16 +58,17 @@ class SrsAggregateDB {
  		-- update existing rows
  		upsert AS (
 			UPDATE " . SrsAggregateDB::TABLE_NAME . " real_table
-			SET " . SrsAggregateDB::PPE_COLUMN . " = ((real_table.".SrsAggregateDB::PPE_COLUMN ." + n.ppe)/ 2), " . SrsAggregateDB::OSM_ID_COLUMN . " = n.osm_id, " . SrsAggregateDB::HIGHWAY_COLUMN . " = n.highway, ".SrsAggregateDB::UPDATED_AT_COLUMN." = n.updated_at, ".SrsAggregateDB::COUNT_COLUMN." = (real_table.".SrsAggregateDB::COUNT_COLUMN ." + n.count), ".SrsAggregateDB::STDDEV_COLUMN." = ((real_table.".SrsAggregateDB::STDDEV_COLUMN ." + n.stddev)/ 2)
+			SET " . SrsAggregateDB::PPE_COLUMN . " = ((real_table.".SrsAggregateDB::PPE_COLUMN ." + n.ppe)/ 2), " . SrsAggregateDB::OSM_ID_COLUMN . " = n.osm_id, " . SrsAggregateDB::HIGHWAY_COLUMN . " = n.highway, ".SrsAggregateDB::UPDATED_AT_COLUMN." = n.updated_at, ".SrsAggregateDB::COUNT_COLUMN." = (real_table.".SrsAggregateDB::COUNT_COLUMN ." + n.count), ".SrsAggregateDB::STDDEV_COLUMN." = ((real_table.".SrsAggregateDB::STDDEV_COLUMN ." + n.stddev)/ 2), ".SrsAggregateDB::LAST_COUNT_COLUMN." = n.count
 			FROM n WHERE real_table.the_geom = n.the_geom
 			RETURNING real_table.the_geom
 		)
 		-- insert missing rows
-		INSERT INTO " . SrsAggregateDB::TABLE_NAME . " (" . SrsAggregateDB::PPE_COLUMN . ", " . SrsAggregateDB::GEOM_COLUMN . ", " . SrsAggregateDB::OSM_ID_COLUMN . ", " . SrsAggregateDB::HIGHWAY_COLUMN  . ", " . SrsAggregateDB::UPDATED_AT_COLUMN . ", " . SrsAggregateDB::COUNT_COLUMN . ", " . SrsAggregateDB::STDDEV_COLUMN . ")
-		SELECT n.ppe, n.the_geom, n.osm_id, n.highway, n.updated_at, n.count, n.stddev FROM n
+		INSERT INTO " . SrsAggregateDB::TABLE_NAME . " (" . SrsAggregateDB::PPE_COLUMN . ", " . SrsAggregateDB::GEOM_COLUMN . ", " . SrsAggregateDB::OSM_ID_COLUMN . ", " . SrsAggregateDB::HIGHWAY_COLUMN  . ", " . SrsAggregateDB::UPDATED_AT_COLUMN . ", " . SrsAggregateDB::COUNT_COLUMN . ", " . SrsAggregateDB::STDDEV_COLUMN . ", ". SrsAggregateDB::LAST_COUNT_COLUMN . ")
+		SELECT n.ppe, n.the_geom, n.osm_id, n.highway, n.updated_at, n.count, n.stddev, n.count FROM n
 		WHERE n.the_geom NOT IN (
 			SELECT the_geom FROM upsert
 		);";
+
 		// finally ask CartoDB to run this statement
 		printDebugln("Query to execute " . $upsert, true);
 

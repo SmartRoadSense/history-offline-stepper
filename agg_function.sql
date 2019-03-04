@@ -2,14 +2,14 @@
 -- Name: srs_current_to_history(integer); Type: FUNCTION; Schema: public; Owner: crowd4roads_sw
 --
 
-CREATE FUNCTION srs_current_to_history(integer, integer) RETURNS void
+CREATE OR REPLACE FUNCTION srs_current_to_history(integer, integer) RETURNS void
     LANGUAGE plpgsql STRICT
     AS $_$
 DECLARE
   how_many ALIAS FOR $1;
   new_time_frame ALIAS FOR $2;
 BEGIN
-  insert into history (ppe, osm_id, quality, the_geom, highway, created_at, time_frame, count, stddev) (select ppe, osm_id, quality, the_geom, highway,  updated_at as created_at, new_time_frame, count, stddev from current limit how_many);
+  insert into history (ppe, osm_id, quality, the_geom, highway, created_at, time_frame, count, stddev, last_count) (select ppe, osm_id, quality, the_geom, highway,  updated_at as created_at, new_time_frame, count, stddev, last_count from current limit how_many);
 END;
 $_$;
 
