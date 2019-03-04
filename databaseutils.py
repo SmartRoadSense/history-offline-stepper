@@ -53,7 +53,7 @@ def disconnect(conn):
 
 def get_date_range(conn):
     # TODO: real general purpose implementation
-    begin = datetime.date(2016, 1, 1)
+    begin = datetime.date(2017, 1, 1)
     end = datetime.date(2019, 2, 5)
 
     return [begin, end]
@@ -134,13 +134,17 @@ def get_single_data_count(conn):
     return get_table_count(conn, SINGLE_DATA_TABLE)
 
 
+def get_current_count(conn):
+    return get_table_count(conn, CURRENT)
+
+
 def get_table_count(conn, table_name):
     try:
         # create a cursor
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         # execute a statement
-        cur.execute('SELECT count(*) as count FROM single_data;')
+        cur.execute('SELECT count(*) as count FROM {0};'.format(table_name))
 
         row = cur.fetchone()
 
