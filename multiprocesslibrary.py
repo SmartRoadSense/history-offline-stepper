@@ -88,11 +88,12 @@ def merge(processes):
         time.sleep(MERGE_CHECK_PERIOD)
         seconds = seconds + 1
 
-        if any(f is not None for f in flags):
+        if all(f is not None for f in flags):
             break
 
     for i, f in enumerate(flags):
         if f != 0:
-            logging.debug("{0} process exited with return code {1}".format(processes[i].pid,processes[i].returncode))
+            logging.error("{0} process exited with return code {1}".format(processes[i].pid,processes[i].returncode))
+            raise Exception('Aggregation subprocess error!')
 
 
